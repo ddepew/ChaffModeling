@@ -1,0 +1,7 @@
+The main script is "positions.m"
+
+All other Matlab files are functions and should work as-is with the main script
+
+Molecule files are specified with extension .mol
+
+Example outputs and a working script (HydrazinePositions.m) are provided in the "examples" directory
