@@ -105,8 +105,8 @@ def main():
                 mol_elem.append(molCell[3])
         except FileNotFoundError:\
 
-            mol_xyz = [0.0,0.0,0.0]
-            atomNames = molTypes['Molecule_Name'][x]
+            mol_xyz = [[0.0,0.0,0.0]]
+            mol_elem = [molTypes['Molecule_Name'][x]]
             print('error!')
 
         #Set boundaries for this atom
@@ -153,14 +153,15 @@ def main():
             #write to file and print to console
             for sub1,sub2 in zip(pos,mol_elem):
                 kk +=  1
-                print("%s %8.5f %8.5f %8.5f\n" %(sub2, sub1[0],sub1[1],sub1[2]), file='setup')
-                print("%3d %2s 0.0 %8.5f %8.5f %8.5f\n" %(kk, sub2, sub1[0],sub1[1],sub1[2]),file="data")
+                print("%s %8.5f %8.5f %8.5f" %(sub2, sub1[0],sub1[1],sub1[2]), file=setup)
+                print("%3d %2s 0.0 %8.5f %8.5f %8.5f" %(kk, sub2, sub1[0],sub1[1],sub1[2]),file=data)
 
             print('Atom positions for molecule' + str(imol) + ':')
             for  atm in pos:
                 for el in atm:
                     print(str(el),end=' ')
-                print('\n')
+                print('')
+            print('')
 
 def atom(A):
 
@@ -272,9 +273,10 @@ def edgeBC(bnd, xmin, xmax, ymin, ymax, zmin, zmax, bc):
             bnd_copy[imax] = bnd[imax] - gblBnd[imax]
             changed = True
 
-        if not changed:
-            bnd_copy = False
+    if not changed:
+        bnd_copy = False
     return(bnd_copy)
 
 
 main()
+
