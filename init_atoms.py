@@ -3,11 +3,29 @@ import math
 import random
 import numpy as np
 from numpy import linalg as la
-
-
+import periodictable
+atomic_masses = periodictable.generate()
 
 #################################################
 # Read inputs from files
+
+'''EDITS LOG
+02/08/2017
+Modify atom() to output uniatoms as list of element NAMES (i.e. ['N','H'])
+    The special cases for atoms with two letters (one upper, one lower case)  was taken care of so the numatoms provides the accurate number of unique atoms.
+02/22/2017
+Assigning all elements to whole numbers using element IDs
+
+Saving atomic masses used as separate variable
+
+Use index method to separate identify the element ID specific to the atom being used in sim SO THAT there is one of each atom in the list and NO sublists
+
+Changes the index "sub2" to something easier to remember such as 'ID'
+
+Changed 'sum()' to 'len()' because the new output from uniatoms was a list of strings and not integers
+
+'''
+
 def main():
 
     inputs = open('input_positions.txt','r')
@@ -26,6 +44,7 @@ def main():
         molTypes['Molecule_Name'].append(molName)
 
         molTypes['Number_Molecules'].append(int(inputs.readline().strip()))
+
 
         region = inputs.readline().strip().split(' ')
         molTypes['Region_Occupation'].append([float(bnd) for bnd in region])
@@ -60,8 +79,10 @@ def main():
 
     for x in molTypes['Molecule_Name']:
         (uniAtoms,numAtoms) = atom(x)
-        uniAtomsGlobal.append(uniAtoms)
         numAtomsGlobal.append(numAtoms)
+        for element in uniAtoms:
+            if element not in uniAtomsGlobal:
+                uniAtomsGlobal.append(element)
 
 
    #calculate the total atoms (number of atoms per molecule*number of molecules) in the entire simulation
@@ -69,7 +90,9 @@ def main():
     print(simAtoms)
 
     #calculate total number of unique atoms
-    uniAtomsGlobal = sum(uniAtomsGlobal)
+    #uniAtomsGlobal = sum(uniAtomsGlobal)
+###read in all the periodic table elements and assign them a whole number (only the ones used above) - use dictionary methods
+
 
     #Header lines for setup
     print(simAtoms,file=setup)
@@ -77,20 +100,34 @@ def main():
 
     #Header lines for data
     print('# ' + simTag, file=data, end='\n\n')
-    print(str(simAtoms)+' atoms\n'+str(uniAtomsGlobal)+' atom types', file = data, end='\n\n')
-    print(str(xmin)+' '+str(xmax)+' xlo xhi\n',file=data)
-    print(str(ymin) + ' ' + str(ymax) + ' ylo yhi\n', file=data)
+    print(str(simAtoms)+' atoms\n'+str(len(uniAtomsGlobal)) + ' atom types', file = data, end='\n\n')
+    print(str(xmin)+' '+str(xmax)+' xlo xhi',file=data)
+    print(str(ymin) + ' ' + str(ymax) + ' ylo yhi', file=data)
     print(str(zmin) + ' ' + str(zmax) + ' zlo zhi', file=data,end='\n\n')
     print('Masses',file=data,end='\n\n')
 
-    for x in range(1,uniAtomsGlobal+1):
-        print(x,file=data)
+
+
+
+
+
+    print(uniAtomsGlobal)
+
+    for x in range(0,len(uniAtomsGlobal)):
+
+        print(str(x+1) + '  ' + str(atomic_masses[uniAtomsGlobal[x]]),file=data)
+
+
+
+
+
+
 
     print('\nAtoms',file=data,end='\n\n')
 ## Iterate through assigning positions for each molecule
     kk = 0
     for x in range(0,numMol):
-        mol_xyz = [[],[],[]]
+        mol_xyz = []
         mol_elem = []
        #Read in molecule base geometry
         try:
@@ -98,10 +135,10 @@ def main():
 
             for line in molFile:
                 molCell = line.strip().split()
-                print(molCell)
-                mol_xyz[0].extend([float(molCell[0])])
-                mol_xyz[1].extend([float(molCell[1])])
-                mol_xyz[2].extend([float(molCell[2])])
+                mol_xyz.append([float(molCell[0]),float(molCell[1]),float(molCell[2])])
+               #mol_xyz[0].extend([float(molCell[0])])
+               #mol_xyz[1].extend([float(molCell[1])])
+               #mol_xyz[2].extend([float(molCell[2])])
                 mol_elem.append(molCell[3])
         except FileNotFoundError:\
 
@@ -109,6 +146,7 @@ def main():
             mol_elem = [molTypes['Molecule_Name'][x]]
             print('error!')
 
+        print(mol_xyz)
         #Set boundaries for this atom
         xmin = molTypes['Region_Occupation'][x][0]
         xmax = molTypes['Region_Occupation'][x][1]
@@ -151,12 +189,13 @@ def main():
                 restr.append(extraBnd)
 
             #write to file and print to console
-            for sub1,sub2 in zip(pos,mol_elem):
+            for sub1,elem in zip(pos,mol_elem):
                 kk +=  1
-                print("%s %8.5f %8.5f %8.5f" %(sub2, sub1[0],sub1[1],sub1[2]), file=setup)
-                print("%3d %2s 0.0 %8.5f %8.5f %8.5f" %(kk, sub2, sub1[0],sub1[1],sub1[2]),file=data)
+                ID = uniAtomsGlobal.index(elem) + 1
+                print("%3d %8.5f %8.5f %8.5f" %(ID , sub1[0],sub1[1],sub1[2]), file=setup)
+                print("%3d %3d 0.0 %8.5f %8.5f %8.5f" %(kk, ID, sub1[0],sub1[1],sub1[2]),file=data)
 
-            print('Atom positions for molecule' + str(imol) + ':')
+            print('Atom positions for molecule ' + str(imol + 1) + ':')
             for  atm in pos:
                 for el in atm:
                     print(str(el),end=' ')
@@ -164,18 +203,37 @@ def main():
             print('')
 
 def atom(A):
+    uniAtoms = []
+    numAtoms = []
+    count = 0
+    for l in A:
+        if l.isupper() == True:
+            uniAtoms.append(l)
+            numAtoms.append(1)
+        elif l.islower() == True:
+            uniAtoms[-1] += l
+        elif l.isdigit() == True:
+            numAtoms[-1] = int(l)
+        count += 1
 
-    uniAtoms = len([l for l in A if l.isupper()])
-    B = [int(l) for l in A if l.isdigit()]
-    totalAtoms = sum(B) + (uniAtoms - len(B))
-
-    #totalAtoms = sum(int([l for l in A if l.isdigit()]))
+    totalAtoms = sum(numAtoms)
     return (uniAtoms, totalAtoms)
-# upper = []
-# for letter in A:
-#     if letter.isdigit():
-#         upper.append(int(letter))
-# sum(upper)
+
+#test function
+#A = 'PtCl3C2H4'
+#(uniAtoms, totalAtoms) = atom(A)
+#print(uniAtoms,totalAtoms)
+
+#create a user friendly directory of all the necessary periodic table elements for simulation calculations
+#the elements will be assigned as the keys, and the values will be the atomic masses
+def generate():
+   names = ['H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl' ,'K','Ar','Ca','Sc','Ti','V','Cr','Mn','Fe','Ni','Co','Cu','Zn','Ga','Ge','As','Se','Br','Kr','Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','I','Te','Xe','Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Pa','Rn','Fr','Ra','Ac','Th','Np','U','Am','Pu','Cm','Bk','Cf','Es','Fm','Md','No','Lr','Rf','Db','Bh','Sg','Hs','Mt','Ds','Rb']
+   atomic_Masses = [1.00794,4.002602,6.941,9.012182,10.811,12.011,14.00674,15.9994,18.9984,20.1797,22.98977,24.305,26.98154,28.0855,30.97376,32.066,35.4527,39.0983,39.948,40.078,44.95591,47.88,50.9415,51.9961,54.93805,55.847,58.6934,58.9332,63.546,65.39,69.723,72.61,74.92159,78.96,79.904,83.8,85.4678,87.62,88.90585,91.224,92.90638,95.94,98,101.07,102.9055,106.42,107.8682,112.411,114.818,118.71,121.757,126.9045,127.6,131.29,132.9054,137.327,138.9055,140.115,140.9077,144.24,145,150.36,151.965,157.25,158.9253,162.5,164.9303,167.26,168.9342,173.04,174.967,178.49,180.9479,183.85,186.207,190.2,192.22,195.08,196.9665,200.59,204.3833,207.2,208.9804,208.9824,209.9871,213.0359,222,223,226.0254,227.0728,232.0381,237.0482,238.0289,243.0614,244.0642,247,247,251,252,257,258,259,260,261,262,262,263,265,266,271,272]
+   periodictable = dict(zip(names, atomic_Masses))
+
+   return periodictable
+
+periodic_table = generate()
 
 def matrix(R,v):
     rotated = []
